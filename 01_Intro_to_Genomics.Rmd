@@ -1,0 +1,63 @@
+---
+title: "R Notebook"
+output:
+  html_notebook:
+    toc: true
+    toc_float: true
+    theme: cerulean
+    number_sections: true
+    highlight: tango
+---
+
+# Introduction 
+
+At the start of the project, I created a new git repository within this directory and initialized a new [GitHub repository](https://github.com/stanley-piotrowski/computational-genomics-in-R). I'll add a README.md file, stage and commit my changes, and push this file to the GitHub repository. 
+
+Install the `compGenomRData` package to use the same datasets not included in BioConductor libraries.  Note, the installation will take several minutes.  
+
+```{r eval = FALSE}
+# Install compGenomRData package
+devtools::install_github("compgenomr/compGenomRData")
+```
+
+## Genes, DNA, and the central dogma
+
+Below are important genome biology review points, broken down by section.
+
+### What's a gene?
+
+* Each somatic cell was derived from the same embryo and thus contains the same biological information, regardless if the cell is a liver cell, heart cell, or skin cell.
+
+* The nuclear genome is composed of DNA in double-helix form wrapped around histone proteins (collectively known as nucleosomes), which then fold to form chromatin and chromosomes (the latter of which is the condensed form).
+
+* In some organisms, the nuclear genome is linear (e.g., in humans); in other organisms (e.g., bacteria), the nuclear genome is circular.  
+
+* The central dogma describes the relationship between the gene sequence, which is transcribed into a mRNA transcript in the nucleus (in eukaryotes), which is subsequently translated into an amino acid sequence and folded into a protein (in the cytoplasm).
+
+* Cellular processes (e.g., repair, respiration, etc) require proteins, as do cellular structures.  
+
+* Gene expression controls how genes are activated and dictates cellular fate (e.g., whether an undifferentiated cell becomes a heart cell or a kidney cell) and can be important in disease progression (e.g., cancers).  
+
+### Transcription and post-transcriptional regulation
+
+* Proteins called general transcription factors recognize core promoters, regions of DNA upstream of transcription start sites, and once bound, form the pre-initiation complex.
+
+* RNA-polymerase recognizes the pre-initiation complex and begins copying the DNA template into a pre-mRNA transcript (a.k.a. the primary transcript, or pre-mRNA, which contains introns).
+
+* The spliceosome (a complex of small nuclear RNAs and proteins) splices, or removes, introns from the pre-mRNA.  Further post-transcriptional modification takes place by removing certain exons (referred to as splice variants) to create a diversity of mature mRNA transripts which are then translated by the ribosome (another complex of RNA and proteins).
+
+* Other genes, like non-coding RNA (ncRNA) genes, are transcribed normally, but not translated into an amino acid sequence.  Examples of ncRNAs include transfer RNAs (tRNAs), ribosomal RNAs (rRNAs), and other RNA species involved in post-translational modification or gene silencing including small interfering RNAs (siRNAs) and micro RNAs (miRNAs).  
+
+### What's a gene look like?
+
+* A gene of interest can be other either DNA strand, which wil also determine the direction of transcription. 
+
+# Note about using GitHub
+
+I used this [textook](https://happygitwithr.com/new-github-first.html#new-github-first) to use the "GitHub first, R Studio second" strategy.  Below is the general workflow:
+
+1. Create a new repository on GitHub (`computational-genomics-in-R`) and initialize with a `README` file.
+
+2. 
+
+

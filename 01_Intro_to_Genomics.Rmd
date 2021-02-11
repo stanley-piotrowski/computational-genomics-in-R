@@ -52,12 +52,85 @@ Below are important genome biology review points, broken down by section.
 
 * A gene of interest can be other either DNA strand, which wil also determine the direction of transcription. 
 
-# Note about using GitHub
+### Note about using GitHub
 
 I used this [textook](https://happygitwithr.com/new-github-first.html#new-github-first) to use the "GitHub first, R Studio second" strategy.  Below is the general workflow:
 
 1. Create a new repository on GitHub (`computational-genomics-in-R`) and initialize with a `README` file.
 
-2. 
+2. Copy the HTTPS URL after clicking "Clone."
 
+3. Create a new R Studio project using the "Verson Control" option.  Paste the HTTPS URL for the GitHub repository.  
+
+Using this workflow the local `master` is tracking the `master` branch on GitHub so we should be ready to go with pushing and pulling commits.  
+
+<hr style="border:1px solid #2FA4E7"> </hr>
+
+## Elements of gene regulation
+
+* There are tow main tyes of gene regulation: pre-transcriptional regulation and co-transcriptional regulation.
+
+* The same genes can encode for multiple proteins through alternative splicing (i.e., splice variants).
+
+* Gene regulation ultimately controls cell differentiation.
+
+### Transcriptional regulation
+
+* Modifications to histone proteins or DNA methylation can suppress transcription (i.e., DNA is physically inaccessible to the general transcription factors; pre-transcriptional), as can mcRNAs (e.g., miRNAs; post-transcriptional modification).
+
+* Transcription factors bind to specific DNA motifs to control the rate of transcription, which can be impacted by distant elements like enhancers, insulators, etc.
+
+* The TATA-box is the motif within the core promoter region, located about 30-bp upstream of the initiator sequence (in animals, at least), and is recognized and bound to first by transcription factor TFIID.  General transcription factors (the complexes or RNA and proteins) are then recruited, and transcription begins on the **initiator sequence.**
+
+* **CpG islands** are CG dinucleotide-enriched segments of DNA and are associated with about 50-70% of the promoters in the human genome.  
+
+* **Proximal promoter elements** are typically located immediately upstream of core promoter elements and contain binding sites for activator transcription factors to control gene expression (we'll refer to this concept as proximal gene regulation).
+
+* **Most of the transcription factor binding sites in the human genome are in intergenic regions or introns**
+
+* **Enhancers** (not suprisingly) enhance transcription in a similar way as the proximal promoter elements in that they contain binding sites for activator transcription factors, but they are typically referred to as distal regulatory elements because they are relatively far away (physically) from the core promoters.  In fact, the activity of the enhancer elements is influenced by the distance (and orientation) to the promoter, and current models suggest they may accomplish their tasks by creating looping in the DNA molecule.  
+
+* **Silencers** decrease the level of transcription of the target gene(s) or suppress it entirely.  They contain binding sites for repressive transcription factors, which act in various ways to either physically block other transcription factors necessary for transcription activation, or alter the chromatin structure.  Polycomb group proteins act to suppress transcription of target genes via epigenetic modification.  
+
+* **Insulators** are sequence elements which insulate a particular target region from the effects of other sequence elements, such as enhancers or silencers.  For example, if an insulator element is present between two genes A and B, each with its own enhancers and promoter elements, the insulator may prevent the enhancer who's target is the promoter of gene A from interacting with the promoter of gene B.  In other cases, insulators may server as blocking elements for advancing condensed chromatin structures, which generally act to suppress transcription.  There are a number of other examples and informative figures [here](http://genesdev.cshlp.org/content/16/3/271.full.html#:~:text=%E2%80%9CInsulator%E2%80%9D%20is%20the%20name%20given,expressing%20gene%20from%20its%20surroundings.).
+
+* **Locus control regions (LCR)** are collections of regulatory elements similar to those described above that act on several genes within a region (the authors use a locus in this textbook) and help to control temporal or tissue-specific gene expression (e.g., controlling expression in a heart cell to it performs the proper functions).  The proper function of the LCR requires the correct orientation.  
+
+<hr style="border:1px solid #2FA4E7"> </hr>
+
+## Epigenetic regulation
+
+* Epigenetic regulation refers to the structures other than DNA sequence elements (e.g., enhancers, silencers, or insulators) which control chromatin structure and accessibility of DNA for transcription factors by influencing either the DNA itself, or the histone proteins the DNA is coiled around. 
+
+### DNA methylation
+
+* DNA methyltransferases catalyze the addition of a methyl group (-CH3) to the cytosines in CpG islands, and either repress the binding of transcription factors or cause the condensed chromatin state to spread.  When CpG islands are methlyated in the core promoter regions, they can silence the transcription, and thus the activity, of the gene.  Perhaps this is a reason why 50-70% of promoters in the human genome are associated with CpG islands.  
+
+* An example of DNA methylation repressing transcription and gene activity is X-chromosome inactivation in females by inducing a heterochromatin state (i.e., condensed and inaccessible to transcription factors). 
+
+### Histone modifications
+
+* Histones are small protein subunits that are wrapped by DNA to form a nucleosome.  A single nucleosome contains 8 histones, each of which has a terminal tail that can be chemically modified through acetylation, methylation, and phosphorylation to induce heterochromatin states (condensed, physically inaccessible to transcription factors) or euchromatin states (open, physically accessible to transcription factors).  
+
+* The naming of histones modifications is dictated by the histone itself (e.g., H3), the identity and position of the modified amino acid (e.g., K4 means the fourth amino acid, lysine, is modified), and the modification (e.g., me3, which means three methyl groups have been added).  Put together, H3K4me3 describes that on the H3 histone, the amino acid lysine present at position 4 has three methyl groups added (in other words, it's tri-methylated).
+
+### Post-transcriptional regulation
+
+* non-coding RNAs (ncRNAs) describe a suite of RNA molecules with various functions related to gene silencing and other post-transcriptional regulation mechanisms (e.g., miRNAs, siRNAs, etc).
+
+* Various elements control post-transcriptional regulation, including exonic and intronic splicing elements that act to enhance or silence splicing at particular junctions, which creates a diversity of protein diversity from the same pre-mRNA transcripts.
+
+<hr style="border:1px solid #2FA4E7"> </hr>
+
+## Shaping the genome: DNA mutation
+
+* All genetic variation ultimately arises from mutation and is the raw material acted upon by natural selection.  
+
+* Mutations can be caused by a number of different reasons, including mistakes in the replication process prior to cell division (on the order of 1 mistake every 100 million or 10 billion base-pairs), mutagens (e.g., UV light, certain chemicals) and mistakes during the DNA repair process.  
+
+* Several types of mutations are discussed, including base substitutions (e.g., single nucleotide polymorphism), indels, microsatellite mutations (insertion or deletion of nucleotide repeat), inversion or translocation (movement of a segment of DNA from one position to another; e.g., Robertsonian translocation).
+
+* Aneuploidies are described as insertions or deletions of whole chromosomes (e.g., trisomy 21, or the presence of three copies of human chromosome 21).
+
+<hr style="border:1px solid #2FA4E7"> </hr>
 

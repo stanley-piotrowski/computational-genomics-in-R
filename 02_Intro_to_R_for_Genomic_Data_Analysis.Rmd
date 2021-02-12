@@ -1,0 +1,638 @@
+---
+title: "02: Introduction to R for Genomic Data Analysis"
+output:
+  html_notebook:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: cerulean
+    highlight: tango
+---
+
+# Steps of genomic data analysis
+
+In general, the sequence of genomic data analysis is data collection, data quality checking and cleaning, data processing, exploratory data analysis and modeling, and visualizing.  In practice, rarely is this a linear sequence.  As in my own research, I have discovered data quality issues that need to be dealt with by going back a few steps, or parameters may need to be modified to optimize the method.  
+
+Below are some notes from the first part of this chapter.
+
+* Data collection may mean generating sequence data yourself, or you could download publicly-available data from a database like UCSC genome browser, Ensembl, or one of the consortia.
+
+* Quality filtering is a critical component in every step of data analysis, particularly when obtaining the raw sequence data.  Errors during sequencing can introduce bias into the raw data, which can create spurious results in downstream analyses if not filtered.
+
+* A basic next step then is to try and understand your data inside and out using exploratory visualization methods and statistical modeling.  The goal is to try and get an understand of how variables are related to one another (for example, does gene expression change with disease status).
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+# Packages
+
+All of the packages can either be downloaded from Bioconductor with `BiocManager`, CRAN, or installing through GitHub with `devtools`.
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+# Data structures
+
+## Vectors
+
+Vectors are analogous to a single column to data in Excel and represent a list of elements of the same type (e.g., numeric or character).
+
+## Matrices
+
+Matrices are a numeric array of rows and columns and can be created using `cbind()` to combine vectors (if they are of type numeric), or by `matrix()`, specifying the number of rows.  As with data frames, matrices can be subsetted using bracket notation `[]` by specifying the rows, then the columns.  For instance, `myMatrix[1,]` would subset the first row of the matrix `myMatrix`.  
+
+## Data frames
+
+Data frames can be of mixed types, but since they are collections of vectors (of the same length), each column (vector) can only be of one type.  
+
+## Lists
+
+A list is an ordered collection of things, which can be completely unrelated and contain different types of data.  Elements of lists are extracted with double-bracket notation `[[]]`.  
+
+## Factors
+
+There are simply classes of categorical data.  It's important to note that when reading data into a data frame (from `read.csv()` or a similar function), strings are automatically converted to factors; to get around this, use a tibble instead, or use the `tidyverse()` import functions (for example, `read_csv()`).
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+# Reading and writing data
+
+Many genomic datasets will be in tabular file formats with defined fields.  One of the most commonly used is the Browswer Extensible Data (BED) format.  There are three required fields for BED files: 
+
+1. **chrom:** specifies the name of the chromosome or scaffold.
+
+2. **chromStart:** starting position of the genomic feature in the chromosome or feature, with the first base in the chromosome numbered 0.
+
+3. **chromEnd:** ending position of the genomic feature in the chromosome or feature.  
+
+There are nine additional fields that can be defined.  Those details can be found on the UCSC genome browser [site](https://genome.ucsc.edu/FAQ/FAQformat.html#format1).  Let's view one of the BED files provided with the package.
+
+```{r}
+# load libraries
+library(compGenomRData)
+suppressPackageStartupMessages(library(tidyverse))
+
+# define file paths
+enhancer_file_path <- system.file("extdata", 
+                                  "subset.enhancers.hg18.bed",
+                                  package = "compGenomRData")
+
+cpg_file_path <- system.file("extdata",
+                             "subset.cpgi.hg18.bed", 
+                             package = "compGenomRData")
+
+# read in enhancer BED file
+# it looks like these are tab-delimited, so we can use read_tsv
+enhancer_df <- read_tsv(enhancer_file_path, col_names = FALSE) 
+
+# read in CpG island BED file
+cpg_island_df <- read_tsv(cpg_file_path, col_names = FALSE)
+```
+We can see that both the files imported correctly using the `readr::read_tsv` function instead of `read.table()` as the authors used.  Let's check out the first few lines of the enhancer BED file.
+
+```{r}
+# read the first 10 lines of the enhancer BED file
+head(enhancer_df)
+```
+
+Now we'll save the CpG island data frame by writing it to a tab-delimited text file.  Let's create an `Output` directory, then another subdirectory within called `Ch02` to keep things organized.  
+
+```{r}
+# create Output directory and specify the recursive = TRUE argument so the Ch02 subdirectory is created
+dir.create("Output/Ch02", recursive = TRUE)
+
+# write the file to the disk
+write_delim(cpg_island_df, file = "Output/Ch02/cpgi.txt", 
+            delim = "\t", col_names = FALSE)
+```
+
+Now let's save the data frame as an R object.  There are a few different ways to do this, including the standard `save()` which will save an object (or multiple objects) as `.Rdata` objects, and `saveRDS()`, whic serializes only a single object to be stored.  The biggest difference I learned from checking out this [blogpost](https://fromthebottomoftheheap.net/2012/04/01/saving-and-loading-r-objects/) is that `saveRDS()` only saves a representation of the object after serialization without the name.  The practical application using this method is that the RDS object can be loaded into an object with a different name than the original; this is not the case using the standard `save()`, because that method stores the name of the object as well.  It's important to note that for single files, `saveRDS()` may be a good option, but not so much if you need to save multiple objects.  In any case, both functions support compression using a variety of methods (e.g., gz).  Let's save the CpG island data frame as an RDS object.
+
+```{r}
+# save
+saveRDS(cpg_island_df, file = "Output/Ch02/cpgi.rds")
+```
+
+## Reading large files
+
+The authors note that the `readr::read_table` and `data.table::d` functions are much faster for reading in large data files, so we'll stick with these instead of using base R.
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+# Plotting
+
+I'm going to skip the section on plotting with base R and go right to plotting with ggplot2.
+
+## Plotting with ggplot2
+
+Let's create a simple data frame with 50 values sampled from the normal distribution using `rnorm()` in one variable, and another 50 values in another variable.  Then we'll practice displaying multiple plots, first using the faceting method, then using `cowplot::plot_grid()` to combine and label plots. 
+
+```{r}
+# create data frame
+my_data <- data.frame(col1 = rnorm(50), 
+                      col2 = rnorm(50))
+
+# create a data frame for faceting
+my_data_v2 <- rbind(data.frame(values = my_data$col1, group = "x"), 
+                    data.frame(values = my_data$col2, group = "y"))
+
+# create a histogram and facet on the group variable
+ggplot(my_data_v2, aes(values)) +
+  geom_histogram(binwidth = 0.25) +
+  facet_wrap(~group)
+```
+
+Now let's use the `cowplot` package to place two different plots side-by-side.
+
+```{r}
+# load library
+library(cowplot)
+
+# histogram
+p1 <- ggplot(my_data_v2, aes(values, fill = group)) +
+  geom_histogram(binwidth = 0.1)
+
+# scatterplot
+p2 <- ggplot(my_data, aes(col1, col2)) +
+  geom_point()
+
+# put the two plots together, labeling A and B
+plot_grid(p1, p2, labels = c("A", "B"), label_size = 12, 
+          label_fontfamily = "serif")
+
+```
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+# Functions and contorl structures (for, if/else, etc.)
+
+## User-defined functions
+
+Practice writing a simple function, which takes two arguments `x` and `y` and returns the sum of their squares.
+
+```{r}
+# sum of the squares
+sq_sum <- function(x, y){
+  result <- x^2 + y^2
+  return(result)
+}
+
+# test it
+sq_sum(1, 2)
+
+# add a message in the function
+sq_sum_v2 <- function(x, y){
+  result <- x^2 + y^2
+  cat("The result is:", result, "\n")
+}
+
+# test
+sq_sum_v2(1, 2)
+```
+
+Now we'll practice incorporating if statements into functions.  We'll read in the CpG island data frame that we saved earlier as an RDS object, then print some messages depending on the length of the CpG island.  
+
+```{r}
+# import data frame
+cpg_island_df <- read_rds(file = "./Output/Ch02/cpgi.rds")
+
+# define the function
+large_cpg <- function(bed_row){
+  
+  # get the length of the CpG island, ending in col 3, starting in col 2
+  cpg_len <- bed_row[3] - bed_row[2] + 1
+  
+  # print messages using the if statements
+  if(cpg_len > 1500){
+    cat("This is a large CpG island!")
+  }
+  else if(cpg_len <= 1500 & cpg_len > 700){
+    cat("This is normal")
+  }
+  else{
+    cat("This is short")
+  }
+}
+
+# test the function (remember, rows first, then columns with bracket subset)
+large_cpg(cpg_island_df[1500, ])
+```
+
+## Loops and looping structures
+
+In general, the loop will iterate and perform some block of code until a condition is satisfied.  Let's create a simple one.
+
+```{r}
+# define the loop
+for (i in 1:10) { # for each number in the sequence of 1 to 10...
+  
+  # ... print which iteraction it is until we reach the end of the sequence
+  cat("This is iteration", i, "\n")
+}
+```
+
+Let's try to write a loop that will iterate through the first 10 rows of the CpG islands data frame and calculate the length of the CpG island. 
+
+```{r}
+# define an empty vector to hold the results
+cpg_results <- c()
+
+# define the loop
+for (i in 1:10) {
+  
+  # loop through i rows of the data frame and calculate length
+  result <- cpg_island_df[i,3] - cpg_island_df[i,2] + 1
+  
+  # print this message for each iteration of the loop
+  cpg_results <- c(cpg_results, result)
+}
+```
+
+### Apply family functions
+
+The apply family of functions are vectorized functions, which is essentially the same thing as a loop, but the code is much cleaner and simpler to interpret.  The different functions in the apply family vary based on the inputs they use (e.g., data frames, matrices, or lists) and how they apply the functions across elements in these different data structures. 
+
+```{r}
+# create a simple matrix
+mat <- cbind(c(3,0,3,3),
+             c(3,0,0,0),
+             c(3,0,0,3),
+             c(1,1,0,0),
+             c(1,1,1,0),
+             c(1,1,1,0))
+
+# look at the matrix
+mat
+```
+Now we'll use the standard `apply()` function to "apply" the `sum()` function across each row of the matrix.  So, we can push this result to a vector, where we should expect to see 12 as the first element (summing across row 1 of the matrix), 3 as the second element (summing across row 2), and so on.  
+
+```{r}
+# calculate the result
+apply(mat, MARGIN = 1, sum)
+```
+
+We used the `MARGIN = 1` argument to specify that we want to apply the `sum()` function across all rows, but we could easily sum the values in the matrix by column.
+
+```{r}
+# calculate result for column-wise apply
+apply(mat, 2, sum)
+```
+
+The `lapply()` function uses lists or vectors as input and applies a function to each element.  Let's consider a simple vector `c(1, 2, 3)`, and we'll use the `lapply()` function to square each element.  The result we are expected is 1, 4, and 9.  
+
+```{r}
+lapply(c(1, 2, 3), function(x) x^2)
+```
+Here, `x` represents each element of the vector `c(1, 2, 3)`.  The next function is `mapply()`, which is the multivariate version of `sapply()` (the simple version).  `mapply()` can take sets of parameters as arguments.  For example, if we had two vectors, each with 5 numbers, and we wanted to sum the values of the first element of each, we could use `mapply()`, which has a very similar structure to `lapply()`, except the order of arguments is slightly different.
+
+```{r}
+# define the vectors
+Xs <- 0:5
+Ys <- c(2,2,2,3,3,3)
+
+# sum the ith element of Xs and Ys
+mapply(function(x, y) sum(x, y), Xs, Ys)
+
+```
+
+### Apply family functions on multiple cores
+
+The same general idea can be used to split larger tasks across multiple cores using the `parallel::mcapply()` function.  
+
+### Vectorized functions
+
+Vectorized functions are simply those that given a vector as input will return an output as well.  For example, instead of using the `mapply()` and `sum()` functions to add the vectors `Xs` and `Ys`, we can just use the addition operator.
+
+```{r}
+Xs + Ys
+```
+
+Similarly, there are already dedicated functions to get the column or row sums of a matrix.
+
+```{r}
+colSums(mat)
+```
+
+```{r}
+rowSums(mat)
+```
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+# Exercises
+
+## Computations in R
+
+```{r}
+# sum 2 and 3
+2 + 3
+
+# take the square root of 36
+sqrt(36)
+
+# take the log (base 10) of 1000
+log10(1000)
+
+# take the log (base 2) of 32
+log2(32)
+
+# assign the sum of 2, 3, and 4 to variable x
+x <- 2 + 3 + 4
+
+# fine absolute value
+abs(5-145)
+
+# calculate the square root of 625 and divide it by 5
+x <- sqrt(625)/5
+
+# multiply x by 10000
+x <- x * 10000
+
+```
+
+## Data structures in R
+
+```{r}
+# Make a vector of 1:5 and 10 and assignn it to vec
+vec <- c(1, 2, 3, 4, 5, 10)
+
+# check length of vector
+length(vec) # 6
+
+# make vector of all numbers betwen 2 and 15
+vec2 <- 2:15
+
+# make vector of 4's repeated 10 times
+vec <- rep(4, times = 10)
+
+# make logical vector
+logical_vec <- c(TRUE, TRUE, TRUE, FALSE)
+
+# make vector of gene names
+gene_names <- c("PAX6", "ZIC2", "OCT4", "SOX2")
+
+# get the 5th and 6th elements of vec- recall, R indexing starts at 1, not 0
+vec[c(5,6)] # 4 4 
+
+# subset using logicals
+my_vec <- 1:5
+my_vec[c(TRUE, TRUE, FALSE, FALSE, FALSE)]
+
+# get elements larger than 2
+my_vec[my_vec > 2] 
+
+# create a 5x3 matrix
+mat <- matrix(1:15, nrow = 5, ncol = 3)
+
+# create matrix by row
+mat <- matrix(1:15, nrow = 5, ncol = 3, byrow = TRUE) # matrix is populated across rows instead of columns
+
+# extract last two rows of the matrix
+mat[4:5,]
+
+# extract first two columns and use class()
+mat[, 1:2] %>% class() # matrix
+class(mat[, 1:2]) # matrix, same thing
+
+# extract first column, should be a vector of class integer
+mat[, 1] %>% class() # integer
+
+# make data frame with 3 cols and 5 rows
+df <- data.frame(col1 = 1:5, 
+                 col2 = 6:10, 
+                 col3 = 11:15)
+
+# extract the first two columns and rows
+df[1:2,1:2]
+
+# extract the last two rows
+df[4:5, ]
+
+# extract second column using the col name (three equivalent solutions)
+df[c("col2")]
+df %>% select(col2)
+df$col2
+
+# extract rows where first column is larger than three (I'll use dplyr)
+df %>% filter(col1 > 3)
+
+# convert to matrix
+df %>% as.matrix()
+as.matrix(df)
+
+# make a list with four elements
+my_list <- list(fruit = c("apple", "orange", "banana", "lemon"), 
+     veggie = c("carrot", "lettuce", "onion", "garlic"), 
+     meat = c("chicken", " beef", "pork", "turkey"), 
+     dairy = c("milk", "cheese", "yogurt", "soymilk"))
+
+# select first item
+my_list$fruit
+my_list[1]
+my_list["fruit"]
+
+# select fourth item 
+my_list$dairy
+my_list[4]
+my_list["dairy"]
+
+# make a factor
+fa <- factor(c("a", "b", "c"))
+
+# convert character vector to factor
+c("hello", "world") %>% as.factor()
+
+# convert the factor back to character
+c("hello", "world") %>% as.factor() %>% as.character()
+
+```
+
+## Reading and writing data in R
+
+```{r}
+# read CpG island tab-delimited aext file
+cpg_file_path <- system.file("extdata", 
+                             "CpGi.table.hg18.txt", 
+                             package = "compGenomRData")
+cpg_island_df <- read_tsv(cpg_file_path, col_names = TRUE)
+cpg_island_df
+
+# the function with the 'sep = ","` doesn't work because the data are separated by tab characters, not commas
+```
+
+```{r}
+# strings are not automatically converted to factors by setting the argument stringAsFactors = FALSE
+
+# read only first 10 lines
+head(cpg_island_df, n = 10)
+
+# using header = FALSE in the read.table function would make all the field headers data, which is not what we want
+
+# write the CpG islands to a text file called my.cpgi.file.txt in the Output/Ch02 directory
+write_tsv(cpg_island_df, file = "./Output/Ch02/my.cpgi.file.txt", col_names = TRUE)
+read_tsv("./Output/Ch02/my.cpgi.file.txt", col_names = TRUE) # looks good
+
+# write out first 10 lines
+head(cpg_island_df, n = 10)
+cpg_island_df[1:10,]
+
+# write first 3 columns
+cpg_island_df[, 1:3]
+
+# write out only CpG islands on chr1
+cpg_island_df %>% 
+  filter(chrom == "chr1")
+
+# read in two other bed files
+rn4_refseq1_path <- system.file("extdata", 
+                                "rn4.refseq.bed", 
+                                package = "compGenomRData")
+
+rn4_refseq2_path <- system.file("extdata",
+                                "rn4.refseq.bed", 
+                                package = "compGenomRData")
+
+df1 <- read_delim(rn4_refseq1_path, delim = "\t", col_names = FALSE)
+df2 <- read_delim(rn4_refseq2_path, delim = "\t", col_names = FALSE)
+
+# see what's in the data frames
+head(df1)
+
+# merge the results
+new.df <- merge(df1, df2)
+head(new.df)
+```
+
+## Plotting 
+
+```{r}
+# generate the snippet for the exercises
+set.seed(1001)
+x1 <- 1:100 + rnorm(100, mean = 0, sd = 15)
+y1 <- 1:100
+
+# scatter plot, give it a title, and rename axes, and I'll use annotate() to add text labels
+data.frame(x1, y1) %>% 
+  ggplot(aes(x1, y1)) +
+  geom_point() +
+  labs(title = "Title", 
+       x = "X1", 
+       y = "Y1") +
+  annotate("text", x = 0, y = 50, label = "hi there")
+
+```
+
+```{r}
+# test correlation between two variables
+cor(x1, y1) # 0.85
+
+# add this to the plot
+data.frame(x1, y1) %>% 
+  ggplot(aes(x1, y1)) +
+  geom_point(color = "red") +
+  labs(title = "Title", 
+       x = "X1", 
+       y = "Y1") +
+  annotate("text", x = -20, y = 85, label = round(cor(x1, y1), 2))
+
+```
+```{r}
+# make a histogram of x1
+data.frame(x1, y1) %>% 
+  ggplot(aes(x1)) +
+  geom_histogram()
+```
+
+```{r}
+my_boxplot <- rbind(data.frame(values = x1, group = "group1"), 
+      data.frame(values = y1, group = "group2")) %>% 
+  ggplot(aes(group, values)) +
+  geom_boxplot()
+my_boxplot
+```
+
+```{r}
+# make boxplot and histogram and put them together
+my_hist <- rbind(data.frame(values = x1, group = "group1"), 
+      data.frame(values = y1, group = "group2")) %>% 
+  ggplot(aes(values, fill = group)) +
+  geom_histogram(bins = 50)
+
+# put them together
+plot_grid(my_boxplot, my_hist, labels = c("A", "B"), label_size = 12, label_fontfamily = "serif")
+
+```
+
+```{r}
+# instead of plotting a scatterplot, use color ramp to make a density plot
+x2 <- 1:1000 + rnorm(1000, mean = 0, sd = 200)
+y2 <- 1:1000
+
+smoothScatter(x2, y2, 
+              colramp = colorRampPalette(c("white", "blue", "green", "yellow", "red")))
+
+
+```
+
+## Functions and control structures
+
+```{r}
+# use the CpG islands data frame for the rest of the exercises
+
+# make a histogram of the perGc column (GC content)
+cpg_island_df %>% 
+  ggplot(aes(perGc)) +
+  geom_histogram(bins = 75)
+
+
+
+```
+
+```{r}
+# make a boxplot for the perGc column
+cpg_island_df %>% 
+  ggplot(aes(perGc)) +
+  geom_boxplot()
+```
+
+```{r}
+# I'll use dplyr to create a new column to decide if the GC percent is low, medium, or high
+cpg_island_df %>% 
+  mutate(GC_class = ifelse(perGc < 60, "low", 
+                              ifelse(perGc > 75, "high", "medium")))
+```
+
+```{r}
+gc_values <- c(10, 50, 70, 65, 90)
+# write a for loop to print the GC percentages
+for (i in 1:length(gc_values)){
+  
+  cat("The GC percentage is", gc_values[i], "%\n")
+}
+
+```
+```{r}
+# write a function that takes the value of GC percent and decides if it's low, medium, or high
+GC_class <- function(my_gc){
+  
+  # if statement
+  ifelse(my_gc < 60, paste("The GC content is", my_gc, "%; It is low"), 
+         ifelse(my_gc > 75, paste("The GC content is", my_gc, "%; It is high"), 
+                paste("The GC content is", my_gc, "%; It is medium")))
+  
+}
+
+# test the function
+GC_class(10)
+GC_class(90)
+GC_class(65)
+```
+
+```{r}
+# use lapply to get GC percentage classes for gcvalues
+lapply(gc_values, function(x) paste("GC percentage is", x, "%"))
+```
+
+```{r}
+# do the same thing with sapply
+sapply(gc_values, function(x) paste("GC percentage is", x, "%"))
+```
+

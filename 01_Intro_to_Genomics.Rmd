@@ -134,3 +134,36 @@ Using this workflow the local `master` is tracking the `master` branch on GitHub
 
 <hr style="border:1px solid #2FA4E7"> </hr>
 
+## High-throughout experimental methods in genomics
+
+### General idea behind the techniques
+
+* The central concept of the high-throughput techniques is enrichment of the target fragments by taking advantage of their unique characteristics.
+
+* In quantification experiments, microarrays were the tool of choice, but you had to have some background knowledge of the sequence of the target to design oligos for the array.  The target would bind to the oligos and emit a light signal.  The intensity of the light signal was proportional to the number of target fragments in the sample.  
+
+### High-throughput sequencing
+
+* Unlike the approach used with microarrays, target quantification can be achieved directly with high-throughput sequencing, where the resulting reads are mapped back to a reference genome and the number of aligned reads can be quantified.  
+
+* One area of research that has drawn a lot of attention lately is single-cell sequencing, which allows us to quantify transcripts within different cell types instead of relying on more genetic material from thousands or millions of cells in a single experiment. 
+
+<hr style="border:1px solid #2FA4E7"> </hr>
+
+## Visualization and data repositories for genomics
+
+* Ideally, you want to have a reference genome and annotations (where the genes are) and other functional elements.  
+
+### Accessing genomic information via genome browsers
+
+* Genome browsers are applications that allow you to visualize what the genome looks like for a target organism, the arrangement of genes within a region, and SNPs that have been identified.
+
+* The main genome browsers are the UCSC genome brower, Ensembl, and the Integrated Genomics Viewer (IGV), the latter of which is a desktop application.  Both UCSC genome browser and Ensembl allow you to download sequencing data in multiple formats and visualize genome sequences on the web.
+
+### Data repositories 
+
+* There are a few commonly used public archives for high-throughput sequencing data, including the Gene Expression Omnibus (GEO) and European Nucleotide Archiva (ENA).  These websites allow users to download data for their own research, although most data is in raw format and will thus need to be processed by the user.  
+
+* There are a few other multinational consortia that have databases containing both raw and processed data.  One of them is [1000 genomes](https://www.internationalgenome.org/), actually contains genomic data from 2,504 people from 26 populations across five continental regions in an effort to understand human genetic variation.  
+
+

@@ -1,0 +1,218 @@
+---
+title: "03: Statistics for Genomics"
+output:
+  html_notebook:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: cerulean
+    highlight: tango
+---
+
+# Introduction
+
+This chapter focuses on the core statistical methods used in genomics research.
+
+```{r}
+# load libraries
+suppressPackageStartupMessages(library(tidyverse))
+library(mosaic)
+```
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+## Statistical distributions
+
+### Describing the central tendency: mean and median
+
+* We want to describe the variation, whether the causes are biological in nature or due to technical differences in the laboratory experiments, using a central tendency with the **mean**
+
+* A key concept is the difference between the **sample** and the **population** from which it was drawn.  In reality, it's largely impossible for us to measure the entire population, so our samples may be biased, and it's important that we distinguish between the true population parameter, and the sample estimate.  So for example, most of the time we're describing the **sample mean**, not the population mean. 
+
+* We can describe the sample mean with the symbol $\overline{x}$, and the population mean with the symbol $\mu$.  The concept of statistical inference is to use the sample to estimate the population parameter, although the latter will generally always be unknown to us, and there is some uncertainty regarding the sample estimates. 
+
+* The mean is biased by outliers, but the **median**, or the central value, is not.  In fact, this is one way we can identify outliers (visualizing with a boxplot is a good way to do this).
+
+### Describing the spread: measurements of variation
+
+* The spread of the data can be calculated with a number of different functions in R, including `range()`, the **standard deviation** using `sd()`, and the variance using `var()`, which is the squared standard deviation, or the squared distance from the mean value.
+
+* The sample variance, $s^2$, is said to be biased because it may underestimate the population variance, $\sigma^2$, so a correction factor of $n-1$ is applied.  
+
+```{r eval=FALSE}
+# calculate the standard deviation and variance for a numeric vector
+x <- rnorm(20, mean = 6, sd = 0.7)
+var(x) # 0.4886862
+sd(x) # 0.699061
+
+```
+
+* The formula for the sample standard deviation is $\frac{(x_i - \overline{x})^2}{n-1}$, summed over all observations.  From this equation, and the definition of the variance and standard deviation (i.e., the distance of the observation from the mean), that both of these parameters are biased in the presence of outliers.  
+
+* One way to visualize the distribution of the data is to examine the interquartile range (IQR) in a boxplot.  The IQR describes the middle 50% of the data, where the middle is the median, and then the middle of that upper and lower half of the data are the first and third quartiles, respectively.  
+
+```{r}
+# generate a boxplot for a vector and calculate IQR
+# note the numbers will look different from the textbook since we're sampling 20 numbers randomly form the normal distribution
+x <- rnorm(20, mean = 6, sd = 0.7)
+IQR(x) # 1.053624
+```
+
+```{r}
+# calculate the quantiles
+quantile(x)
+```
+
+```{r}
+# create the boxplot
+data.frame(x) %>% 
+  ggplot(aes(x)) +
+  geom_boxplot()
+```
+
+### Frequently used statistical distributions
+
+* Each statistical distribution has parameters which define it (e.g., mean and variance) but they also describe functions to describe the probability of a particular outcome's occurrence.  In other words, we can use the probability distributions to describe the likelihood of a random variable taking a specific value.  
+
+* The **normal (Gaussian)** distribution is controlled by the mean and variance, and we describe where a random variable $X$ falls along the normal distribution using the equation $X ~ N(\mu, \sigma^2)$.  
+
+* A **probability density function (PDF)** describes the probability of observing a random variable with a given value on a statistical distribution.  For example, using the PDF of the Gaussian distribution, we can obtain the probability of seeing a random variable with the value 1 on a normal distribution with a mean of 6 and a standard deviation of 0.7.  
+
+* If you wanted to know the probability of $X$ being larger or smaller than a particular value on a normal distribution, you could integrate the PDF (i.e., find the area under the curve in the probability distribution to the right or left of $X$).  Instead, you could use the **Z-score**, which standardizes the value to describe the distance from the mean (this is also much simpler to calculate).  That is calculated by $(X-\mu)/\sigma$ and is distributed along a standard normal distribution with a mean of 0 and standard deviation of 1.  That is also written as $N(0,1)$.  
+
+* Below are some of the functions in the `*norm()` family of functions for calculating probabilities of values using the normal distribution.  To illustrate these concepts, we can use the IQ example proposed [here](https://www.datascienceblog.net/post/basic-statistics/distributions/).
+
+  * `dnorm()` gives the PDF- that is, the density, or the probability, of the PDF at a specific value on the normal distribution.  You can calculate this by hand using the PDF equation for the normal distribution.  In the IQ example, let's say we wanted to know the probability that someone would have an IQ of 140, given that we can model IQ with a mean of 100 and a standard deviation of 15.  Using `dnorm`, this works out to be 0.00076, meaning the probability that someone has an IQ of 140 is about 0.076%!
+  
+  * `pnorm()` gives the cumulative density function (CDF)- that is, the cumulative probability of the variable taking on a specific value to the left or right of the one specified in the normal distribution.  For example, what if we wanted to know the probability of someone having an IQ of 140 or higher?  In other words, what's the cumulative probability of someone have an IQ of 140 or higher?  To get this, we'll set the `lower.tail = FALSE` argument and get about 0.0038.  This means that the probability of someone having an IQ of 140 or higher is about 0.0038.
+  
+  * We can get random numbers sampled from the normal distribution using `rnorm()` and specifying the mean and standard deviation.
+  
+  * `qnorm()` is the inverse of the CDF and gives us the value associated with a given probability on the normal distribution.  For example, if we wanted to know the most likely IQ for someone scoring in the top 25% of the sample, we could use the expression `qnorm(0.75, mean = 100, sd = 15)`, which would give us about 110.  The IQ score of someone scoring in the bottom 25% of the sample would be about 89.  We can actually calculate this with the `quantile()` function too, but the `qnorm()` function is better if we have a probability we're interested in that doesn't fall on the quantiles.
+  
+* Some other probability distributions that are commonly used are the binomial distribution (used for modeling binary data, like methylation [i.e., methylated or not]), the Poisson distribution (used for modeling count data, like read counts), the F distribution (used to model ratios of variation), and the chi-squared distribution (used to model the distribution of variables).
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+### Precision of estimates: confidence intervals
+  
+* When we calculate estimates from a sample, the goal is to make inferences about the larger population, but generally there will always be some variation in the estimate.  The confidence interval, or credible interval, gives the range of plausible values that contain the true value of the population parameter of interest.  
+
+* We can accomplish this task by re-sampling with replacement, called bootstrapping, by making repeated estimates and identifying the 2.5th and 97.5th percentiles from the range of estimates.  
+
+```{r}
+# calculate the confidence interval for the population mean using bootstrapping
+set.seed(21)
+sample1 <- rnorm(100, mean = 20, sd = 5)
+
+# bootstrap 
+boot_means <- do(1000) * mean(resample(sample1, replace = TRUE))
+
+# get percentiles
+boot_quantiles <- quantile(boot_means$mean, probs = c(0.025, 0.975))
+
+# plot
+data.frame(sample1) %>% 
+  ggplot(aes(sample1)) +
+  geom_density(fill = "white") +
+  scale_x_continuous(limits = c(-5, 35)) +
+  annotate("segment", x = boot_quantiles[[1]], xend = boot_quantiles[[1]], y = 0, yend = 0.08, color = "red", linetype = "dashed") +
+  annotate("segment", x = boot_quantiles[[2]], xend = boot_quantiles[[2]], y = 0, yend = 0.08, color = "red", linetype = "dashed") +
+  annotate("text", x = 17, y = 0.08, label = paste(round(boot_quantiles[[1]], 2))) +
+  annotate("text", x = 23, y = 0.08, label = paste(round(boot_quantiles[[2]], 2)))
+```
+
+* We know the true mean is 20, but the confidence intervals displayed in the plot above show that if it were unknown, the true population mean would be between 19.31 and 21.21 with 95% confidence, based on 1,000 bootstrap replicates.
+
+* We can also use the **central limit theorem** to generate the confidence intervals, which describes that if we repeatedly obtained samples with the same sample size, the distribution of sample means would be approximately normal with mean of $\mu$ and standard deviation $\sigma/ \sqrt{n}$.  Practically, this works out to be about $X - 1.96\sigma / \sqrt{n}$ for the lower bound, and the opposite for the upper bound.  There is a slightly more in-depth explanation of the association with the Z-score, but this is a close enough approximation for right now.  We can also accomplish this with the `qnorm()`.  
+
+* The above method of calculating confidence intervals works when we know the population standard deviation, but in reality, that's really never the case, so the t-distribution is used instead.  The t-distribution also has a mean of 0 and has degrees of freedom equal to $n-1$.  **Degrees of freedom* are the number of data points minus the number of parameters being estimated.  In the case of the t-distribution, we're only estimating the population mean, which is why the degrees of freeom is $n - 1$.
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+## How to test for differences between samples
+
+* We need to devise methods of comparing means such that we account for the variation due to sampling error- basically, asking ourselves, what are some plausible values for differences in sample means that are only due to sampling.
+
+### Randomization-based testing for difference of means
+
+Our null hypothesis is that for two hypothetical groups, a treatment and control, there is no difference between means (e.g., gene expression).  As such, if we randomly assigned observations from one group into the other, then re-calculated the sample means of each group, we could generate a null distribution that would correspond to our null hypothesis of no difference in sample means.  We would shuffle the samples into different groups, calculate the mean each time, obtain a range of possible sample means under the null hypothesis, then calculate the proportion of means from the randomization procedure that were as extreme or more extreme than the original observation.  That would give us the p-value.  We can use the `mosaic` package to shuffle the groups and generate the null distribution.
+
+```{r}
+# first, generate datasets drawn from different distributions
+set.seed(123)
+treatment <- rnorm(30, mean = 4, sd = 2)
+control <- rnorm(30, mean = 2, sd = 2)
+
+# calcualte the original difference
+original_diff <- mean(treatment) - mean(control) # 2.544455
+
+# put these data into a data frame
+gene_df <- data.frame(means = c(treatment, control), 
+                      group = c(rep("treatment", 30), rep("control", 30)))
+
+# plot these so we can see what this looks like
+gene_df %>% 
+  ggplot(aes(means, fill = group)) +
+  geom_density(alpha = 0.6)
+```
+
+Now let's calculate the difference in sample means using the randomization procedure in `mosaic::shuffle()`, which unlike the bootstrap method implemented with `mosaic::resample()`, resamples without replacement.  
+
+```{r}
+# generate distribution of the difference in sample means under the null hypothesis
+null_diff <- do(1000) * diff(mosaic::mean(means ~ shuffle(group), data = gene_df))
+
+# calculate the p-value, which is the sum of resampled observations that are as great or greater than the original, divided by the total
+p_val <- sum(null_diff$treatment > original_diff)/nrow(null_diff$treatment)
+
+# plot
+data.frame(null_diff) %>% 
+  ggplot(aes(treatment)) +
+  geom_density(fill = "grey") +
+  annotate("segment", x = quantile(null_diff$treatment, 0.95), xend = quantile(null_diff$treatment, 0.95), 
+           y = 0, yend = 0.3, linetype = "dashed", color = "red") +
+  annotate("segment", x = original_diff, xend = original_diff, y = 0, yend = 0.3, linetype = "solid", color = "red") +
+  annotate("text", x = 0.9, y = 0.35, label = "0.05") +
+  annotate("text", x = original_diff, y = 0.35, label = "org diff") +
+  annotate("text", x = 2, y = 0.8, label = "p-value = 0") +
+  labs(x = "Null distribution (no difference in means)", 
+       y = "Density",
+       title = "Ho: no difference in sample means")
+```
+
+We can see from the randomization test that we performed that if the null hypothesis were true, the probability of observing a difference in means as great or greater than the one we observed is 0.  The dashed line in the plot above shows the distribution of extreme values at the 0.05 level- meaning only 5% of observations are greater than, or to the right of, the value at the dashed line.  
+
+### Using a t-test for difference in sample means
+
+In general, a t-test is simpler than a randomization test, but normally the test requires that variances are equal between groups.  When this is not the case, it's best to use a Welch's t-test, which we can use in R with the `t.test()` function.  It's also important to consider that the results from t-tests may be biased if groups are not normally distributed, but we can think back to the central limit theorem- as long as sample sizes are large enough, means of samples will be normally distributed regardless of the population distribution (i.e., if the population is not normally distributed, as long as the sample is large enough, it's probably safe to use the t-test).
+
+```{r}
+# conduct the welch's t-test
+t.test(treatment, control)
+```
+We can see that the probability of observing the t-statistic from these two groups, assuming the null hypothesis is true, is essentially 0, confirming the results from the randomization test.  
+
+### Multiple testing correction
+
+* There are two main types of errors in hypothesis testing: **type I** errors, which are false positives (e.g., rejecting the null hypothesis when the null hypothesis is true), and **type II** errors, which are false negatives (e.g., failing to reject the null hypothesis when the null hypothesis is false).  In the context of hypothesis testing, we can describe the specificity and sensitivity (also called the "power of a test"), and in general, we strive for more sensitive tests.  More powerful statistical tests will have fewer type II errors, or fewer false negatives.  
+
+* The significance level describes the chances that we will incorrectly reject the null hypothesis, or obtain a false positive result.  When the number of tests is relatively low, say 10, that isn't much of a problem.  But if we are conducting 1,000 or even 10,000 tests, the chances of obtaining a false positive result increase dramatically.  
+
+* The multiple testing procedures generally just try to inflate the p-values such that the potentially borderline p-values are above the critical threshold, while those with true meaningful signal pass the filter.  Each has different approaches, and some are much more conservative than others (e.g., Bonferroni tends to be the most conservative).
+
+* Most of the time, the false discovery rate (FDR) procedure is used, which controls the number of false positive tests with the number of significant discoveries.  In other words, if you correct at the 0.05 level using the FDR procedure, about 5% of the significant tests are going to be false positives.  
+
+* It's important to note that although the FDR p-value and q-value are similar, they are actually calculated differently, so are not interchangable.
+
+### Moderated t-tests: using information from multiple comparisons
+
+* Moderated tests, or shrinkage methods, can be applied to shrink individual variance estimates across samples toward the mean or median or all comparisons (for example, if there are thousands) to improve performance of individual variance estimates.  
+
+* By incorporating information from all tests and improving variance estimates overall, significance testing performance may increase.
+
+<hr style="border:0.5px solid #2FA4E7"> </hr>
+
+## Linear models and correlation
+
+
